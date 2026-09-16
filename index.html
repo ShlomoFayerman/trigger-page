@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מרכז השליטה</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  /* ---------- טוקנים — מהפרופיל העיצובי, בלי צבע חמישי ---------- */
+  :root{
+    --ink:#0E1116;
+    --cream:#F7F6F3;
+    --orange:#F2913C;
+    --teal:#5FBFC4;
+
+    /* גוונים נגזרים — לא צבעים חדשים, אותם ארבעה בשקיפות/בהירות */
+    --ink-soft:#1A1F27;
+    --ink-line:#2A313C;
+    --muted:#6B7280;
+    --line:#E2E0DA;
+
+    /* פונקציונליים בלבד — סימון מצב, לא כרומה עיצובית */
+    --ok:#2E7D4F;
+    --err:#B3261E;
+
+    --radius:14px;
+  }
+
+  *,*::before,*::after{box-sizing:border-box;}
+  html{-webkit-text-size-adjust:100%;}
+  body{
+    margin:0;
+    background:var(--cream);
+    color:var(--ink);
+    font-family:"Heebo","Segoe UI",Arial,sans-serif;
+    font-weight:400;
+    font-size:1rem;
+    line-height:1.6;
+  }
+  h1,h2,h3{font-weight:900;line-height:1.05;letter-spacing:-0.02em;margin:0;}
+  img{display:block;max-width:100%;height:auto;}
+  button{font-family:inherit;}
+
+  .wrap{width:min(1120px,100% - 2.5rem);margin-inline:auto;}
+
+  /* ---------- כותרת עליונה ---------- */
+  .topbar{background:var(--ink);color:var(--cream);padding-block:1.4rem;}
+  .topbar .wrap{
+    display:flex;align-items:center;justify-content:space-between;
+    gap:1rem;flex-wrap:wrap;
+  }
+  .topbar h1{font-size:1.65rem;}
+  .topbar .sub{
+    color:#9AA3AF;font-size:.9rem;margin-top:.25rem;
+  }
+  .serverdot{
+    display:inline-flex;align-items:center;gap:.5rem;
+    font-size:.85rem;color:#9AA3AF;
+    background:var(--ink-soft);border:1px solid var(--ink-line);
+    padding:.4rem .8rem;border-radius:999px;
+  }
+  .serverdot i{
+    width:8px;height:8px;border-radius:50%;background:var(--ok);
+    display:block;flex:0 0 auto;
+  }
+
+  /* ---------- רשת הכרטיסים ---------- */
+  main{padding-block:2rem 3rem;}
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(430px,1fr));
+    gap:1.5rem;
+    align-items:stretch;   /* כל הכרטיסים בגובה השורה, גם עם מספר שדות שונה */
+  }
+  /* ברגע שקונסולה אחת נפתחת היא מוסיפה מאות פיקסלים לכרטיס שלה.
+     יישור-גובה כאן היה מותח את הכרטיס השני לחלל ריק ענק, אז מוותרים עליו. */
+  .grid.has-output{align-items:start;}
+
+  .card{
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    border-top:4px solid var(--accent,var(--orange));
+    overflow:hidden;
+    display:flex;flex-direction:column;
+  }
+  .card-head{padding:1.25rem 1.35rem 0;}
+  .card-title{display:flex;align-items:center;gap:.6rem;}
+  .card-title .icon{font-size:1.5rem;line-height:1;}
+  .card-title h2{font-size:1.3rem;}
+  .card-sub{color:var(--muted);font-size:.9rem;margin:.5rem 0 0;}
+
+  .meta{
+    display:flex;gap:.5rem;flex-wrap:wrap;
+    padding:1rem 1.35rem .25rem;
+  }
+  .chip{
+    font-size:.85rem;font-weight:700;
+    padding:.3rem .7rem;border-radius:999px;
+    border:1px solid var(--line);color:var(--muted);
+    background:var(--cream);
+  }
+  .chip.cost{
+    border-color:var(--accent);
+    color:var(--ink);
+    background:color-mix(in srgb,var(--accent) 16%,#fff);
+  }
+
+  /* ---------- שדות ---------- */
+  /* אזור השדות בולע את הפרש הגובה בין הכרטיסים.
+     align-content:start משאיר את השדות צמודים לראש — העודף יורד למטה,
+     וכך כפתורי ההרצה ושורות הסטטוס של כל הכרטיסים יושבים על אותו קו. */
+  .fields{
+    padding:1rem 1.35rem;
+    display:grid;gap:.95rem;
+    flex:1 1 auto;align-content:start;
+  }
+  .field label{
+    display:block;font-weight:700;font-size:.9rem;margin-bottom:.3rem;
+  }
+  .field .req{color:var(--orange);}
+  .field .hint{
+    display:block;color:var(--muted);font-size:.8rem;
+    font-weight:400;margin-top:.3rem;line-height:1.45;
+  }
+  .field .date-echo{
+    display:block;font-size:.82rem;font-weight:600;
+    margin-top:.3rem;line-height:1.45;color:var(--accent);
+  }
+  .field .date-echo.is-empty{color:var(--muted);font-weight:400;}
+  input[type=text],input[type=number],input[type=date],select{
+    width:100%;
+    padding:.6rem .7rem;
+    font-family:inherit;font-size:1rem;
+    color:var(--ink);background:#fff;
+    border:1px solid var(--line);border-radius:8px;
+    outline:none;
+  }
+  input:focus,select:focus{
+    border-color:var(--accent);
+    box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 25%,transparent);
+  }
+  input[type=date],input[type=number]{direction:ltr;text-align:right;}
+  /* טקסט-דוגמה בשדה ריק: מילים ולא ערך, ובהיר בבירור מערך אמיתי.
+     "2" אפור בשדה של מספר שיעור נראה כמו שדה מלא (נמצא ב-13-09). */
+  input::placeholder{color:#A8ADB5;opacity:1;font-weight:400;}
+  select{cursor:pointer;}
+  .filepath{
+    margin-top:.5rem;font-family:Consolas,"Courier New",monospace;
+    font-size:.8rem;direction:ltr;text-align:left;
+  }
+
+  /* ---------- פעולות ---------- */
+  .actions{
+    padding:.35rem 1.35rem 1.35rem;
+    display:flex;align-items:center;gap:.7rem;flex-wrap:wrap;
+  }
+  .run{
+    flex:1 1 auto;
+    display:flex;align-items:center;justify-content:center;gap:.6rem;
+    min-height:52px;padding:.75rem 1.1rem;
+    font-size:1.05rem;font-weight:900;
+    color:var(--ink);background:var(--accent);
+    border:none;border-radius:10px;cursor:pointer;
+    transition:filter .15s ease;
+  }
+  .run:hover:not(:disabled){filter:brightness(1.07);}
+  .run:disabled{opacity:.45;cursor:not-allowed;}
+  .run .price{
+    font-size:.9rem;font-weight:700;
+    background:rgba(14,17,22,.16);
+    padding:.15rem .55rem;border-radius:999px;
+    direction:ltr;
+  }
+  .stop{
+    min-height:52px;padding:.75rem 1.1rem;
+    font-weight:700;color:var(--cream);background:var(--ink);
+    border:none;border-radius:10px;cursor:pointer;
+  }
+  .stop[hidden]{display:none;}
+
+  /* ---------- סטטוס ---------- */
+  .status{
+    display:flex;align-items:center;gap:.55rem;
+    padding:.7rem 1.35rem;
+    border-top:1px solid var(--line);
+    font-size:.9rem;font-weight:700;
+    background:var(--cream);
+  }
+  .status .dot{
+    width:10px;height:10px;border-radius:50%;
+    background:var(--muted);flex:0 0 auto;
+  }
+  .status .elapsed{margin-inline-start:auto;color:var(--muted);font-weight:400;direction:ltr;}
+  .card[data-status=running] .status .dot{
+    background:var(--orange);
+    animation:pulse 1.1s ease-in-out infinite;
+  }
+  .card[data-status=running] .status{color:var(--orange);}
+  .card[data-status=done]    .status .dot{background:var(--ok);}
+  .card[data-status=done]    .status{color:var(--ok);}
+  .card[data-status=error]   .status .dot{background:var(--err);}
+  .card[data-status=error]   .status{color:var(--err);}
+  @keyframes pulse{
+    0%,100%{opacity:1;transform:scale(1);}
+    50%    {opacity:.35;transform:scale(.75);}
+  }
+  @media (prefers-reduced-motion:reduce){
+    .card[data-status=running] .status .dot{animation:none;}
+  }
+
+  /* ---------- קונסולה ---------- */
+  .console-wrap{border-top:1px solid var(--line);}
+  .console-bar{
+    display:flex;align-items:center;gap:.6rem;
+    padding:.55rem 1.35rem;
+    font-size:.85rem;color:var(--muted);
+    cursor:pointer;user-select:none;
+    background:var(--cream);
+  }
+  .console-bar .caret{transition:transform .15s ease;display:inline-block;}
+  .console-wrap.open .console-bar .caret{transform:rotate(90deg);}
+  .console-bar .count{margin-inline-start:auto;direction:ltr;}
+  .console{
+    display:none;
+    margin:0;padding:.9rem 1.1rem;
+    max-height:340px;overflow:auto;
+    background:var(--ink);color:#D7DBE0;
+    font-family:Consolas,"Courier New",monospace;
+    font-size:.82rem;line-height:1.55;
+    white-space:pre-wrap;word-break:break-word;
+    unicode-bidi:plaintext;      /* כל שורה מקבלת כיוון משלה — עברית ואנגלית מעורבות */
+    text-align:start;
+  }
+  .console-wrap.open .console{display:block;}
+  .console .cmd{color:var(--teal);}
+  .console .err{color:#FF8A80;}
+  .console .empty{color:#6B7280;}
+
+  /* ---------- שגיאת אימות ---------- */
+  .formerror{
+    margin:0 1.35rem 1rem;
+    padding:.7rem .9rem;
+    border:1px solid var(--err);border-inline-start:4px solid var(--err);
+    border-radius:8px;
+    background:#FDF3F2;color:var(--err);
+    font-size:.88rem;white-space:pre-wrap;
+  }
+  .formerror[hidden]{display:none;}
+
+  /* ---------- פוטר ---------- */
+  footer{background:var(--ink);color:#7C8492;padding-block:2rem;margin-top:auto;}
+  footer .wrap{
+    display:flex;align-items:center;justify-content:space-between;
+    gap:1rem;flex-wrap:wrap;font-size:.82rem;
+  }
+  footer img{width:96px;max-width:120px;opacity:.9;}
+  footer code{direction:ltr;display:inline-block;color:#9AA3AF;}
+
+  .boot{padding:3rem 0;text-align:center;color:var(--muted);}
+
+  @media (max-width:520px){
+    .grid{grid-template-columns:1fr;}
+    .topbar h1{font-size:1.35rem;}
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap">
+    <div>
+      <h1 id="page-title">מרכז השליטה</h1>
+      <div class="sub" id="page-sub">טוען…</div>
+    </div>
+    <span class="serverdot"><i></i> השרת מחובר</span>
+  </div>
+</header>
+
+<main class="wrap">
+  <div id="grid" class="grid"></div>
+  <div id="boot" class="boot">טוען אוטומציות…</div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <img src="/assets/logo.png" alt="" onerror="this.remove()">
+    <div>
+      רץ מקומית על <code id="page-address">127.0.0.1:8765</code> · <span id="year"></span>
+    </div>
+  </div>
+</footer>
+
+<script>
+"use strict";
+
+const POLL_MS = 1000;
+const LS_KEY = "trigger-page-values";
+const cards = new Map();   // automation_id -> state
+let TODAY = "";
+
+document.getElementById("year").textContent = new Date().getFullYear();
+
+/* ---------- זיכרון טפסים: לא מקלידים שוב את אותם ערכים בכל הרצה ---------- */
+function loadSaved(){
+  try { return JSON.parse(localStorage.getItem(LS_KEY) || "{}"); }
+  catch { return {}; }
+}
+function saveValues(id, values){
+  const all = loadSaved();
+  const keep = Object.assign({}, values);
+  delete keep.file;              // נתיב קובץ לא נשמר — משתנה בכל שיעור
+  all[id] = keep;
+  try { localStorage.setItem(LS_KEY, JSON.stringify(all)); } catch {}
+}
+
+/* יישור-הגובה בין הכרטיסים פעיל רק כשכל הקונסולות סגורות. */
+function syncGridAlign(){
+  const grid = document.getElementById("grid");
+  grid.classList.toggle("has-output",
+    !!grid.querySelector(".console-wrap.open"));
+}
+
+const esc = s => String(s).replace(/[&<>"']/g,
+  c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+/* ---------- בניית כרטיס מתוך ההגדרה בשרת ---------- */
+function fieldHTML(automation, field, saved){
+  const req = field.required ? ' <span class="req">*</span>' : "";
+  const hint = field.hint ? `<span class="hint">${esc(field.hint)}</span>` : "";
+  const id = `f-${automation.id}-${field.name}`;
+  const val = saved[field.name] != null ? esc(saved[field.name]) : "";
+  let input = "";
+
+  if (field.type === "audiofile"){
+    input =
+      `<select id="${id}" data-name="${field.name}" class="audio-select">
+         <option value="">טוען קבצים…</option>
+       </select>
+       <input type="text" class="filepath" id="${id}-manual" hidden
+              placeholder="C:\\Users\\...\\lesson.m4a" dir="ltr">`;
+  } else if (field.type === "number"){
+    input = `<input type="number" id="${id}" data-name="${field.name}"
+             value="${val}" min="${field.min ?? 0}"
+             placeholder="${esc(field.placeholder || "")}">`;
+  } else if (field.type === "date"){
+    // התצוגה של input[type=date] נקבעת ע"י שפת הדפדפן (אצלנו MM/DD/YYYY),
+    // ולכן מוצגת מתחתיו השורה בעברית — כדי שלא יתבלבלו יום וחודש.
+    //
+    // default_today: false ← השדה נפתח תמיד ריק, וגם לא נזכר מריצה קודמת.
+    // לשדה שבו "ריק" הוא ברירת מחדל בעלת משמעות (הסדרן: ריק = היום האחרון
+    // ששני המיילים שלו הגיעו), תאריך שמולא מראש הוא בחירה שהמשתמש לא עשה.
+    const dateVal = field.default_today === false ? "" : (val || TODAY);
+    input = `<input type="date" id="${id}" data-name="${field.name}"
+             class="date-input" value="${dateVal}">
+             <span class="date-echo" data-for="${id}"></span>`;
+  } else {
+    input = `<input type="text" id="${id}" data-name="${field.name}" value="${val}">`;
+  }
+
+  return `<div class="field">
+            <label for="${id}">${esc(field.label)}${req}</label>
+            ${input}${hint}
+          </div>`;
+}
+
+function cardHTML(automation, accent, saved){
+  return `
+  <section class="card" data-id="${automation.id}" data-status="idle"
+           style="--accent:${accent}">
+    <div class="card-head">
+      <div class="card-title">
+        <span class="icon">${automation.icon}</span>
+        <h2>${esc(automation.title)}</h2>
+      </div>
+      <p class="card-sub">${esc(automation.subtitle)}</p>
+    </div>
+
+    <div class="meta">
+      <span class="chip">⏱ ${esc(automation.duration)}</span>
+      <span class="chip cost">${esc(automation.cost)} לריצה</span>
+    </div>
+
+    <div class="fields">
+      ${automation.fields.map(f => fieldHTML(automation, f, saved)).join("")}
+    </div>
+
+    <div class="formerror" hidden></div>
+
+    <div class="actions">
+      <button class="run" type="button">
+        <span class="run-label">הרץ עכשיו</span>
+        <span class="price">${esc(automation.cost)}</span>
+      </button>
+      <button class="stop" type="button" hidden>עצור</button>
+    </div>
+
+    <div class="status">
+      <span class="dot"></span>
+      <span class="text">מוכן</span>
+      <span class="elapsed"></span>
+    </div>
+
+    <div class="console-wrap">
+      <div class="console-bar">
+        <span class="caret">›</span>
+        <span>פלט ההרצה</span>
+        <span class="count">0 שורות</span>
+      </div>
+      <pre class="console"><span class="empty">אין פלט עדיין.</span></pre>
+    </div>
+  </section>`;
+}
+
+/* ---------- קריאת ערכי הטופס ---------- */
+function readValues(state){
+  const values = {};
+  for (const field of state.automation.fields){
+    if (field.type === "audiofile"){
+      const sel = state.el.querySelector(`.audio-select[data-name="${field.name}"]`);
+      const manual = state.el.querySelector(`#f-${state.automation.id}-${field.name}-manual`);
+      values[field.name] = (sel.value === "__manual__")
+        ? manual.value.trim()
+        : sel.value;
+    } else {
+      const input = state.el.querySelector(`[data-name="${field.name}"]`);
+      values[field.name] = input ? input.value.trim() : "";
+    }
+  }
+  return values;
+}
+
+/* ---------- מצב ויזואלי ---------- */
+const STATUS_TEXT = {
+  idle:      "מוכן",
+  running:   "רץ…",
+  done:      "✓ הסתיים בהצלחה",
+  error:     "✗ נכשל — ראה את הפלט למטה",
+  cancelled: "⛔ נעצר"
+};
+
+function setStatus(state, status, extra){
+  state.el.dataset.status = (status === "cancelled") ? "error" : status;
+  state.el.querySelector(".status .text").textContent =
+    extra || STATUS_TEXT[status] || status;
+  const running = status === "running";
+  state.el.querySelector(".run").disabled = running;
+  state.el.querySelector(".run .run-label").textContent =
+    running ? "רץ…" : "הרץ עכשיו";
+  state.el.querySelector(".stop").hidden = !running;
+  state.el.querySelectorAll("input,select").forEach(i => { i.disabled = running; });
+}
+
+function showError(state, message){
+  const box = state.el.querySelector(".formerror");
+  box.textContent = message;
+  box.hidden = !message;
+}
+
+function appendLines(state, lines){
+  if (!lines.length) return;
+  const box = state.el.querySelector(".console");
+  if (state.lineCount === 0) box.innerHTML = "";
+  const nearBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 60;
+
+  for (const line of lines){
+    const span = document.createElement("span");
+    if (line.startsWith("$ ")) span.className = "cmd";
+    else if (/error|traceback|exception|שגיאה|נכשל|⛔/i.test(line)) span.className = "err";
+    span.textContent = line + "\n";
+    box.appendChild(span);
+  }
+  state.lineCount += lines.length;
+  state.el.querySelector(".console-bar .count").textContent =
+    state.lineCount + " שורות";
+  if (nearBottom) box.scrollTop = box.scrollHeight;
+}
+
+const fmtElapsed = s =>
+  String(Math.floor(s/60)).padStart(2,"0") + ":" + String(s%60).padStart(2,"0");
+
+/* ---------- לולאת ה-polling ---------- */
+async function poll(state){
+  let data;
+  try {
+    const res = await fetch(`/api/status?run_id=${state.runId}&offset=${state.offset}`);
+    data = await res.json();
+  } catch (err){
+    appendLines(state, ["[הדף איבד קשר עם השרת] " + err]);
+    setStatus(state, "error", "✗ אין קשר עם השרת");
+    clearInterval(state.timer); state.timer = null;
+    return;
+  }
+  if (data.error){
+    appendLines(state, ["[שגיאה] " + data.error]);
+    setStatus(state, "error");
+    clearInterval(state.timer); state.timer = null;
+    return;
+  }
+
+  appendLines(state, data.lines || []);
+  state.offset = data.next_offset;
+  state.el.querySelector(".status .elapsed").textContent = fmtElapsed(data.elapsed);
+
+  if (data.status !== "running"){
+    clearInterval(state.timer); state.timer = null;
+    const label = (data.status === "error" && data.exit_code != null)
+      ? `✗ נכשל (קוד יציאה ${data.exit_code}) — ראה את הפלט למטה`
+      : null;
+    setStatus(state, data.status, label);
+    if (data.status !== "done") state.el.querySelector(".console-wrap").classList.add("open");
+    syncGridAlign();
+  } else {
+    setStatus(state, "running");
+  }
+}
+
+/* ---------- הרצה ---------- */
+async function runAutomation(state){
+  showError(state, "");
+  const values = readValues(state);
+
+  // בדיקת שדות חובה קודם. אחרת הוא היה מאשר תשלום ואז מגלה ששכח שדה.
+  const missing = state.automation.fields
+    .filter(f => f.required && !values[f.name])
+    .map(f => "חסר שדה חובה: " + f.label);
+  if (missing.length){
+    showError(state, missing.join("\n"));
+    return;
+  }
+
+  if (state.automation.cost_confirm){
+    const ok = confirm(
+      `הרצה זו עולה ${state.automation.cost} ולוקחת ${state.automation.duration}.\n\n` +
+      `שיעור ${values.lesson || "?"} · ${values.date || "?"}\n\n` +
+      `להריץ?`
+    );
+    if (!ok) return;
+  }
+
+  setStatus(state, "running");
+  state.el.querySelector(".console").innerHTML = "";
+  state.lineCount = 0;
+  state.offset = 0;
+  state.el.querySelector(".console-wrap").classList.add("open");
+  syncGridAlign();
+
+  let data;
+  try {
+    const res = await fetch("/api/run", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({automation_id: state.automation.id, values})
+    });
+    data = await res.json();
+  } catch (err){
+    setStatus(state, "error", "✗ אין קשר עם השרת");
+    showError(state, "השרת לא הגיב. ודא שחלון ה-python עדיין פתוח.\n" + err);
+    return;
+  }
+
+  if (data.error){
+    setStatus(state, "idle");
+    showError(state, data.error);
+    return;
+  }
+
+  saveValues(state.automation.id, values);
+  state.runId = data.run_id;
+  state.timer = setInterval(() => poll(state), POLL_MS);
+  poll(state);
+}
+
+async function stopAutomation(state){
+  if (!state.runId) return;
+  if (!confirm("לעצור את ההרצה? מה שכבר חויב לא יוחזר.")) return;
+  try {
+    await fetch("/api/cancel", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({run_id: state.runId})
+    });
+  } catch (err){ /* ה-poll יתפוס את זה */ }
+}
+
+/* ---------- בורר הקבצים ---------- */
+async function fillAudioSelects(){
+  const selects = document.querySelectorAll(".audio-select");
+  if (!selects.length) return;
+  let files = [];
+  try {
+    const res = await fetch("/api/audio-files");
+    files = (await res.json()).files || [];
+  } catch {}
+
+  for (const sel of selects){
+    sel.innerHTML =
+      `<option value="">— בחר קובץ —</option>` +
+      files.map(f =>
+        `<option value="${esc(f.path)}">${esc(f.name)} · ${f.size_mb}MB · ${f.modified} · ${esc(f.folder)}</option>`
+      ).join("") +
+      `<option value="__manual__">✎ נתיב אחר…</option>`;
+
+    const manual = document.getElementById(sel.id + "-manual");
+    sel.addEventListener("change", () => {
+      manual.hidden = sel.value !== "__manual__";
+      if (!manual.hidden) manual.focus();
+    });
+  }
+}
+
+
+/* ---------- הד תאריך בעברית ---------- */
+const HE_DAYS = ["ראשון","שני","שלישי","רביעי","חמישי","שישי","שבת"];
+const HE_MONTHS = ["ינואר","פברואר","מרץ","אפריל","מאי","יוני",
+                   "יולי","אוגוסט","ספטמבר","אוקטובר","נובמבר","דצמבר"];
+
+function renderDateEcho(input){
+  const echo = document.querySelector(`.date-echo[data-for="${input.id}"]`);
+  if (!echo) return;
+  const v = input.value;                    // תמיד YYYY-MM-DD, ללא תלות בתצוגה
+  if (!v){
+    echo.textContent = "לא נבחר תאריך";
+    echo.classList.add("is-empty");
+    return;
+  }
+  const [y,m,d] = v.split("-").map(Number);
+  const dt = new Date(y, m-1, d);
+  echo.classList.remove("is-empty");
+  echo.textContent =
+    `נבחר: יום ${HE_DAYS[dt.getDay()]}, ${d} ב${HE_MONTHS[m-1]} ${y}  (${v})`;
+}
+
+function wireDateEchoes(){
+  for (const input of document.querySelectorAll("input.date-input")){
+    renderDateEcho(input);
+    input.addEventListener("input",  () => renderDateEcho(input));
+    input.addEventListener("change", () => renderDateEcho(input));
+  }
+}
+
+/* ---------- אתחול ---------- */
+(async function init(){
+  let data;
+  try {
+    const res = await fetch("/api/automations");
+    data = await res.json();
+  } catch (err){
+    document.getElementById("boot").textContent =
+      "אין קשר עם השרת. ודא שחלון ה-python פתוח ורץ.";
+    return;
+  }
+
+  TODAY = data.today;
+
+  // הכותרת, תת-הכותרת והכתובת מגיעות מקובץ התצורה — לא כתובות ב-HTML.
+  const settings = data.settings || {};
+  if (settings.title){
+    document.getElementById("page-title").textContent = settings.title;
+    document.title = settings.title;
+  }
+  document.getElementById("page-sub").textContent = settings.subtitle || "";
+  if (settings.address){
+    document.getElementById("page-address").textContent = settings.address;
+  }
+
+  const saved = loadSaved();
+  const accents = ["var(--orange)", "var(--teal)"];
+  const grid = document.getElementById("grid");
+
+  grid.innerHTML = data.automations
+    .map((a, i) => cardHTML(a, accents[i % accents.length], saved[a.id] || {}))
+    .join("");
+  document.getElementById("boot").remove();
+
+  for (const automation of data.automations){
+    const el = grid.querySelector(`.card[data-id="${automation.id}"]`);
+    const state = {automation, el, runId:null, timer:null, offset:0, lineCount:0};
+    cards.set(automation.id, state);
+
+    el.querySelector(".run").addEventListener("click", () => runAutomation(state));
+    el.querySelector(".stop").addEventListener("click", () => stopAutomation(state));
+    el.querySelector(".console-bar").addEventListener("click", () => {
+      el.querySelector(".console-wrap").classList.toggle("open");
+      syncGridAlign();
+    });
+  }
+
+  fillAudioSelects();
+  wireDateEchoes();
+
+  // אזהרה לפני סגירת הטאב בזמן שמשהו רץ — סגירה באמצע שורפת כסף.
+  window.addEventListener("beforeunload", e => {
+    for (const state of cards.values()){
+      if (state.timer){ e.preventDefault(); e.returnValue = ""; return; }
+    }
+  });
+})();
+</script>
+</body>
+</html>
