@@ -1,0 +1,24 @@
+# התצורה האישית - נתיבים ואוטומציות של המשתמש. לריפו עולה רק automations.example.json
+automations.json
+
+# סודות - אסור שיגיעו ל-GitHub
+.env
+.env.*
+*.key
+.mcp.json
+mcp.json
+.claude/settings.local.json
+
+# קבצי מערכת
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# לוגים
+*.log
